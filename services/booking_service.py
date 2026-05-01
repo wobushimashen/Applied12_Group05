@@ -207,3 +207,89 @@ class BookingService:
             return "Standard Cancellation"
         else:
             return "Late Cancellation"
+
+    def check_no_shows(self):
+        """Detect and mark bookings where the student did not show up.
+        A booking is a no-show if: status is Active, end_time has passed,
+        and no equipment was borrowed during the session.
+        Returns list of (booking, student) tuples that were marked as no-show.
+        """
+        now = datetime.now()
+        no_shows = []
+
+        for booking in list(self.ds.bookings.values()):
+            if booking.status != Booking.STATUS_ACTIVE:
+                continue
+
+            try:
+                booking_end = datetime.strptime(
+                    f"{booking.date} {booking.end_time}", "%Y-%m-%d %H:%M")
+            except ValueError:
+                continue
+
+            # Only check bookings that have ended
+            if now <= booking_end:
+                continue
+
+            # Check if student borrowed equipment during this booking
+            active_loans = [el for el in self.ds.equipment_loans.values()
+                            if el.booking_id == booking.booking_id and not el.is_returned]
+            if active_loans:
+                continue  # Still has equipment, not a no-show
+
+            # Mark as no-show
+            student = self.ds.users.get(booking.student_id)
+            if not student or not hasattr(student, 'add_strike'):
+                continue
+
+            booking.status = Booking.STATUS_NO_SHOW
+            banned = student.add_strike("no_show")
+            no_shows.append((booking, student, banned))
+
+        if no_shows:
+            self.ds.save_all()
+
+        return no_shows
+
+    def mark_no_show_admin(self, booking_id):
+        """Admin manually marks a booking as no-show."""
+        booking = self.ds.bookings.get(booking_id)
+        if not booking:
+            return False, "Booking not found."
+        if booking.status != Booking.STATUS_ACTIVE:
+            return False, "This booking is not active."
+        if booking.is_future():
+            return False, "Cannot mark a future booking as no-show."
+
+        student = self.ds.users.get(booking.student_id)
+        if not student or not hasattr(student, 'add_strike'):
+            return False, "Student not found."
+
+        booking.status = Booking.STATUS_NO_SHOW
+        banned = student.add_strike("no_show")
+        total_strikes = student.late_cancellation_count + student.no_show_count
+        self.ds.save_all()
+
+        msg = f"Booking {booking.booking_reference} marked as No-Show. "
+        msg += f"Strikes: {total_strikes}/3. "
+        if banned:
+            msg += f"Student banned until {student.ban_end_date}."
+        return True, msg
+
+    def get_all_bookings(self):
+        return list(self.ds.bookings.values())
+
+    def get_overdue_bookings(self):
+        """Get active bookings that have passed their end time (potential no-shows)."""
+        now = datetime.now()
+        overdue = []
+        for b in self.ds.bookings.values():
+            if b.status != Booking.STATUS_ACTIVE:
+                continue
+            try:
+                end = datetime.strptime(f"{b.date} {b.end_time}", "%Y-%m-%d %H:%M")
+                if now > end:
+                    overdue.append(b)
+            except ValueError:
+                continue
+        return overdue

@@ -1,14 +1,17 @@
 from models.user import Admin
 from services.room_service import RoomService
+from services.booking_service import BookingService
 
 
 class AdminMenu:
     def __init__(self, data_service):
         self.ds = data_service
         self.room_service = RoomService(data_service)
+        self.booking_service = BookingService(data_service)
 
     def show(self, admin: Admin):
         while True:
+            overdue = self.booking_service.get_overdue_bookings()
             print("\n" + "=" * 50)
             print(f"   Admin Dashboard - {admin.first_name} {admin.last_name}")
             print("=" * 50)
@@ -18,6 +21,9 @@ class AdminMenu:
             print("  [4] Remove Room")
             print("  [5] View All Bookings")
             print("  [6] View All Students")
+            print("  [7] Manage Bookings (Mark No-Show)")
+            if overdue:
+                print(f"  [!] {len(overdue)} overdue booking(s) need review")
             print("  [B] Logout")
             print("-" * 50)
             choice = input(">> Enter your choice: ").strip()
@@ -34,6 +40,8 @@ class AdminMenu:
                 self._view_all_bookings()
             elif choice == "6":
                 self._view_all_students()
+            elif choice == "7":
+                self._manage_bookings()
             elif choice.upper() == "B":
                 print("\n[+] Logged out successfully.")
                 break
@@ -169,9 +177,73 @@ class AdminMenu:
             print("  No students registered.")
             return
 
-        print(f"  {'ID':<10} {'Name':<20} {'Email':<30} {'Balance':<10} {'Banned'}")
-        print("  " + "-" * 70)
+        print(f"  {'ID':<10} {'Name':<20} {'Email':<30} {'Balance':<10} {'Strikes':<8} {'Banned'}")
+        print("  " + "-" * 75)
         for s in students:
             banned = "Yes" if s.is_banned else "No"
+            strikes = s.late_cancellation_count + s.no_show_count
             print(f"  {s.student_id:<10} {s.first_name} {s.last_name:<14} {s.email:<30} "
-                  f"${s.account_balance:<9.2f} {banned}")
+                  f"${s.account_balance:<9.2f} {strikes}/3{'':<4} {banned}")
+
+    def _manage_bookings(self):
+        """Admin can review overdue bookings and mark no-shows."""
+        from models.booking import Booking
+
+        overdue = self.booking_service.get_overdue_bookings()
+
+        print("\n" + "-" * 60)
+        print("   Manage Bookings - Mark No-Show")
+        print("-" * 60)
+
+        if not overdue:
+            print("  No overdue bookings to review.")
+            return
+
+        buildings = {b.building_id: b.building_name for b in self.ds.buildings.values()}
+        print(f"  {'#':<4} {'Reference':<18} {'Student':<12} {'Room':<10} {'Date':<12} {'Time'}")
+        print("  " + "-" * 60)
+        for i, b in enumerate(overdue, 1):
+            student = self.ds.users.get(b.student_id)
+            sname = student.first_name if student else "Unknown"
+            room = self.ds.rooms.get(b.room_id)
+            rname = room.room_name if room else "Unknown"
+            print(f"  [{i}]  {b.booking_reference:<18} {sname:<12} {rname:<10} {b.date:<12} "
+                  f"{b.start_time}-{b.end_time}")
+
+        print("\n  [A] Mark ALL as No-Show")
+        print("  [S] Select individual booking")
+        print("  [B] Go back")
+        choice = input(">> Enter choice: ").strip()
+
+        if choice.upper() == "B":
+            return
+        elif choice.upper() == "A":
+            for b in overdue:
+                ok, msg = self.booking_service.mark_no_show_admin(b.booking_id)
+                if ok:
+                    print(f"\n[+] {msg}")
+            self.ds.save_all()
+        elif choice.upper() == "S":
+            try:
+                sel = int(input(">> Select booking (#): ").strip())
+                if sel < 1 or sel > len(overdue):
+                    print("\n[!] Invalid selection.")
+                    return
+            except ValueError:
+                print("\n[!] Invalid input.")
+                return
+
+            booking = overdue[sel - 1]
+            student = self.ds.users.get(booking.student_id)
+            sname = f"{student.first_name} {student.last_name}" if student else "Unknown"
+
+            confirm = input(f">> Mark {booking.booking_reference} ({sname}) as No-Show? (y/n): ").strip()
+            if confirm.lower() != "y":
+                print("\n[*] Cancelled.")
+                return
+
+            ok, msg = self.booking_service.mark_no_show_admin(booking.booking_id)
+            if ok:
+                print(f"\n[+] {msg}")
+            else:
+                print(f"\n[!] {msg}")

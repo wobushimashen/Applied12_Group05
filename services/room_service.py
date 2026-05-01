@@ -112,3 +112,33 @@ class RoomService:
 
     def get_all_building_names(self):
         return [b.building_name for b in self.ds.buildings.values()]
+
+    def get_room_by_id(self, room_id):
+        return self.ds.rooms.get(room_id)
+
+    def get_room_details(self, room_id):
+        """Get full room details including building name and equipment list."""
+        room = self.ds.rooms.get(room_id)
+        if not room:
+            return None
+
+        building = self.ds.buildings.get(room.building_id)
+        building_name = building.building_name if building else "Unknown"
+
+        equipment = self.ds.get_equipment_by_room(room_id)
+        available_eq = [e for e in equipment if e.is_available and not e.is_damaged]
+        damaged_eq = [e for e in equipment if e.is_damaged]
+
+        return {
+            "room": room,
+            "building_name": building_name,
+            "all_equipment": equipment,
+            "available_equipment": available_eq,
+            "damaged_equipment": damaged_eq,
+        }
+
+    def filter_by_capacity(self, min_capacity, max_capacity, rooms=None):
+        """Filter rooms by capacity range."""
+        if rooms is None:
+            rooms = self.browse_rooms()
+        return [r for r in rooms if min_capacity <= r.capacity <= max_capacity]

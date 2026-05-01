@@ -1,29 +1,37 @@
 # Monash Smart Study Room Booking System (MSSRB)
 
 ## 1. Project Overview
-A terminal-based (CLI) study room booking system for Monash University students. Students can browse rooms, make bookings, borrow equipment, and manage their accounts. Administrators can manage room inventory. Built with Python 3 using OOP principles and CSV file storage.
+A terminal-based (CLI) study room booking system for Monash University students. Students can browse rooms, make bookings, borrow equipment, and manage their accounts. Administrators can manage room inventory and monitor bookings. Built with Python 3 using OOP principles and CSV file storage.
 
 ## 2. Team Accountabilities
-- FanZiHao = Product Owner + Developer
-- YinShangWen = Scrum Master + Developer
-- ChenZhiTao = Developer
-- ChenXinYu = Developer
-- WangJiandong = Developer
+- Zihao Fan = Product Owner + Developer
+- Shangwen Yin = Scrum Master + Developer
+- Zhitao Chen = Developer
+- Xinyu Chen = Developer
+- Jiandong Wang = Developer
 
-## 3. Main Features
-- Student Registration & Login
-- Add Funds & Purchase Package Deal
-- Browse and Filter Rooms (by time and building)
-- Checkout and Payment (Account Balance or Package Hours)
-- Cancel Booking (with late cancellation tracking)
-- Admin Room Management (Create, Update, Remove)
-- Equipment Borrowing & Return (with deposit system)
+## 3. Main Features (12 User Stories)
+| US | Feature | Description |
+|----|---------|-------------|
+| 1.1 | Registration | Student registration with Monash email validation |
+| 1.2 | Add Funds | Top-up account balance ($0.01 - $1000) |
+| 2.1 | Admin Room Management | Create, update, remove rooms |
+| 2.2 | Equipment Borrowing | Borrow equipment with $100 deposit |
+| 3.1 | Browse & Filter Rooms | Filter by time, building, capacity |
+| 3.2 | Cancel Booking | Cancellation with late penalty tracking |
+| 4.1 | Checkout & Payment | Pay with balance or package hours |
+| 4.2 | Package Deal | $100 for 12 bookable hours |
+| 5.1 | No-Show Detection | Auto-detect and penalize no-shows |
+| 6.1 | Transaction History | View detailed transaction records |
+| 7.1 | Room Details | View room info and available equipment |
+| 8.1 | Admin Manage Bookings | Mark bookings as no-show |
 
 ## 4. Project Structure
 ```
 Applied12_Group05/
 ├── main.py                    # Entry point
 ├── models/                    # Entity classes (OOP)
+│   ├── __init__.py
 │   ├── user.py               # User (abstract), Student, Admin
 │   ├── building.py           # Building
 │   ├── room.py               # Room
@@ -33,13 +41,16 @@ Applied12_Group05/
 │   ├── package_deal.py       # PackageDeal
 │   └── transaction.py        # Transaction
 ├── services/                  # Business logic
-│   ├── data_service.py       # CSV read/write, mock data
+│   ├── __init__.py
+│   ├── data_service.py       # CSV read/write
+│   ├── data_init.py          # Mock data + query helpers
 │   ├── auth_service.py       # Registration, Login
 │   ├── room_service.py       # Room CRUD, Browse/Filter
-│   ├── booking_service.py    # Book, Cancel, Checkout
+│   ├── booking_service.py    # Book, Cancel, Checkout, No-show
 │   ├── equipment_service.py  # Borrow, Return, Damage
 │   └── payment_service.py    # Top-up, Package, Promo
 ├── ui/                        # CLI menus
+│   ├── __init__.py
 │   ├── main_menu.py          # Welcome, Login, Register
 │   ├── student_menu.py       # Student dashboard
 │   └── admin_menu.py         # Admin dashboard
@@ -72,6 +83,12 @@ All stored in `data/` directory as CSV files:
 | Admin | admin@monash.edu | Monash1234! |
 | Student | alice@student.monash.edu | Monash1!a |
 | Student | bob@student.monash.edu | Monash1!b |
+| Student | charlie@student.monash.edu | Monash1!c |
+| Student | diana@student.monash.edu | Monash1!d |
+| Student | ethan@student.monash.edu | Monash1!e |
+| Student | fiona@student.monash.edu | Monash1!f |
+| Student | george@student.monash.edu | Monash1!g |
+| Student | hannah@student.monash.edu | Monash1!h |
 
 ## 8. Business Rules
 - Only `@student.monash.edu` emails accepted for registration
@@ -92,11 +109,21 @@ All stored in `data/` directory as CSV files:
 - Delete all CSV files in `data/` to reset to initial mock data
 - Ensure Python 3.13+ is installed
 
-## 10. Contribution Summary
+## 10. Code File Distribution
+| Member | Files | Lines |
+|--------|-------|-------|
+| Zihao Fan | data_service.py, room_service.py, equipment_service.py | 435 |
+| Shangwen Yin | data_init.py, booking.py, __init__.py | 445 |
+| Zhitao Chen | booking_service.py, main_menu.py, transaction.py, equipment_loan.py, room.py, equipment.py, building.py | 413 |
+| Xinyu Chen | student_menu.py, package_deal.py | 473 |
+| Jiandong Wang | admin_menu.py, payment_service.py, auth_service.py, user.py, main.py | 408 |
+| **Total** | **20 Python files** | **2174** |
+
+## 11. Contribution Summary
 | Member | Role | Contributions |
 |--------|------|---------------|
-| FanZiHao | Product Owner + Developer | Requirements, Room Management |
-| YinShangWen | Scrum Master + Developer | Sprint Planning, Booking System |
-| ChenZhiTao | Developer | Authentication, Data Layer |
-| ChenXinYu | Developer | Equipment, Payment System |
-| WangJiandong | Developer | UI/CLI, Integration |
+| Zihao Fan | Product Owner + Developer | Data persistence layer, Room service, Equipment service |
+| Shangwen Yin | Scrum Master + Developer | Mock data initialization, Booking model, Sprint management |
+| Zhitao Chen | Developer | Booking service, Login flow, Equipment loan model, Room model |
+| Xinyu Chen | Developer | Student UI/CLI, Package deal, Room details view |
+| Jiandong Wang | Developer | Admin UI/CLI, Auth service, Payment service, User model |

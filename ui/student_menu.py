@@ -139,7 +139,7 @@ class StudentMenu:
                 print(f"  [{i}]  {room.room_name:<15} {room.capacity:<10} ${room.price_per_hour:.2f}")
 
         # Select room
-        print("\n  Select a room to book:")
+        print("\n  Select a room to view details or book:")
         try:
             sel = int(input("  >> Room number (#): ").strip())
             if sel < 1 or sel > len(rooms):
@@ -150,6 +150,9 @@ class StudentMenu:
             return
 
         selected_room = rooms[sel - 1]
+
+        # Show room details before booking
+        self._show_room_details(selected_room.room_id)
 
         # If no date/time entered yet, get it now
         if not date:
@@ -489,3 +492,36 @@ class StudentMenu:
             print(f"\n[+] {message}")
         else:
             print(f"\n[!] {message}")
+
+    # ── Room Details ────────────────────────────────────────
+    def _show_room_details(self, room_id):
+        """Display detailed room information including equipment."""
+        details = self.room_service.get_room_details(room_id)
+        if not details:
+            print("\n[!] Room not found.")
+            return
+
+        room = details["room"]
+        print("\n" + "-" * 50)
+        print(f"   Room Details: {room.room_name}")
+        print("-" * 50)
+        print(f"  Building:    {details['building_name']}")
+        print(f"  Capacity:    {room.capacity} people")
+        print(f"  Price:       ${room.price_per_hour:.2f}/hour")
+        print(f"  Status:      {'Available' if room.is_available else 'Unavailable'}")
+        print(f"  Equipment:   Table and Chair (included)")
+
+        if details["available_equipment"]:
+            print(f"\n  Optional Equipment Available:")
+            for eq in details["available_equipment"]:
+                print(f"    - {eq.equipment_type} ($100 deposit)")
+
+        if details["damaged_equipment"]:
+            print(f"\n  Currently Unavailable:")
+            for eq in details["damaged_equipment"]:
+                print(f"    - {eq.equipment_type} (under repair)")
+
+        if not details["all_equipment"]:
+            print(f"\n  No optional equipment in this room.")
+
+        print("-" * 50)
