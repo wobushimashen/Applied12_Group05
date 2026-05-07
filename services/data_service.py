@@ -1,4 +1,4 @@
-import csv
+﻿import csv
 import os
 
 from models.user import Student, Admin
@@ -33,11 +33,11 @@ class DataService:
 
         self._load_all()
 
-    # ── File Paths ──────────────────────────────────────────
+    # 鈹€鈹€ File Paths 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _path(self, filename):
         return os.path.join(DATA_DIR, filename)
 
-    # ── CSV Helpers ─────────────────────────────────────────
+    # 鈹€鈹€ CSV Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _read_csv(self, filename):
         filepath = self._path(filename)
         if not os.path.exists(filepath):
@@ -57,7 +57,7 @@ class DataService:
             for record in records:
                 writer.writerow(record)
 
-    # ── Load All Data ───────────────────────────────────────
+    # 鈹€鈹€ Load All Data 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _load_all(self):
         self._load_users()
         self._load_buildings()
@@ -108,8 +108,12 @@ class DataService:
             r = Room(
                 room_id=row["room_id"], room_name=row["room_name"],
                 building_id=row["building_id"],
+                room_type=row.get("room_type", ""),
                 capacity=row.get("capacity", 2),
+                standard_equipment=row.get("standard_equipment", ""),
                 price_per_hour=row.get("price_per_hour", 10.0),
+                opening_time=row.get("opening_time", "08:00"),
+                closing_time=row.get("closing_time", "22:00"),
                 is_available=row.get("is_available", "True") == "True",
             )
             self.rooms[r.room_id] = r
@@ -191,7 +195,7 @@ class DataService:
                     if line and line != "student_id":
                         self.promo_codes_used.add(line)
 
-    # ── Save All Data ───────────────────────────────────────
+    # 鈹€鈹€ Save All Data 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def save_all(self):
         self._save_users()
         self._save_buildings()
@@ -218,8 +222,9 @@ class DataService:
         self._write_csv("buildings.csv", fieldnames, records)
 
     def _save_rooms(self):
-        fieldnames = ["room_id", "room_name", "building_id", "capacity",
-                       "price_per_hour", "is_available"]
+        fieldnames = ["room_id", "room_name", "building_id", "room_type", "capacity",
+                       "standard_equipment", "price_per_hour", "opening_time",
+                       "closing_time", "is_available"]
         records = [r.to_dict() for r in self.rooms.values()]
         self._write_csv("rooms.csv", fieldnames, records)
 
@@ -260,3 +265,5 @@ class DataService:
             f.write("student_id\n")
             for sid in self.promo_codes_used:
                 f.write(f"{sid}\n")
+
+

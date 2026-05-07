@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+﻿from datetime import datetime, timedelta
 
 from models.user import Student, Admin
 from models.building import Building
@@ -12,14 +12,14 @@ from models.transaction import Transaction
 
 def init_mock_data(ds):
     """Initialize realistic mock data for the MSSRB system."""
-    # ── Admin ───────────────────────────────────────────
+    # 鈹€鈹€ Admin 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     admin = Admin(
         user_id="admin001", email="admin@monash.edu",
         password="Monash1234!", first_name="System", last_name="Admin",
     )
     ds.users[admin.user_id] = admin
 
-    # ── Students (8 students with varied states) ────────
+    # 鈹€鈹€ Students (8 students with varied states) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     alice = Student(
         user_id="stu001", email="alice@student.monash.edu",
         password="Monash1!a", first_name="Alice", last_name="Chen",
@@ -72,11 +72,23 @@ def init_mock_data(ds):
         student_id="36668008", mobile_number="0478901234",
         account_balance=12.00,
     )
+    student1 = Student(
+        user_id="test001", email="student1@student.monash.edu",
+        password="Student123!", first_name="Student", last_name="One",
+        student_id="39990001", mobile_number="0400000001",
+        account_balance=150.00,
+    )
+    student2 = Student(
+        user_id="test002", email="student2@student.monash.edu",
+        password="Student123!", first_name="Student", last_name="Two",
+        student_id="39990002", mobile_number="0400000002",
+        account_balance=80.00,
+    )
 
-    for s in [alice, bob, charlie, diana, ethan, fiona, george, hannah]:
+    for s in [alice, bob, charlie, diana, ethan, fiona, george, hannah, student1, student2]:
         ds.users[s.user_id] = s
 
-    # ── Buildings (3 Monash campus buildings) ───────────
+    # 鈹€鈹€ Buildings (3 Monash campus buildings) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     ltb = Building(building_id="bld001", building_name="LTB")
     mth = Building(building_id="bld002", building_name="MTH")
     wds = Building(building_id="bld003", building_name="WDS")
@@ -84,25 +96,23 @@ def init_mock_data(ds):
     ds.buildings[mth.building_id] = mth
     ds.buildings[wds.building_id] = wds
 
-    # ── Rooms (10 rooms across 3 buildings) ─────────────
+    # Rooms across 3 buildings with 27 Apr room-type rules.
     rooms_data = [
-        ("rm001", "LTB-214", "bld001", 2, 10.0),
-        ("rm002", "LTB-305", "bld001", 2, 10.0),
-        ("rm003", "LTB-110", "bld001", 2, 10.0),
-        ("rm004", "MTH-S201", "bld002", 2, 10.0),
-        ("rm005", "MTH-S203", "bld002", 2, 10.0),
-        ("rm006", "MTH-105", "bld002", 2, 10.0),
-        ("rm007", "MTH-301", "bld002", 2, 10.0),
-        ("rm008", "WDS-305", "bld003", 2, 10.0),
-        ("rm009", "WDS-201", "bld003", 2, 10.0),
-        ("rm010", "WDS-102", "bld003", 2, 10.0),
+        ("rm001", "LTB-214", "bld001", "Small", 2, "1 table, 2 chairs", 10.0, "08:00", "22:00"),
+        ("rm002", "LTB-305", "bld001", "Small", 2, "1 table, 2 chairs", 10.0, "08:00", "22:00"),
+        ("rm003", "LTB-110", "bld001", "Small", 2, "1 table, 2 chairs", 10.0, "08:00", "22:00"),
+        ("rm004", "MTH-S201", "bld002", "Medium", 6, "1 big table, 6 chairs, 1 whiteboard on the wall", 40.0, "08:00", "22:00"),
+        ("rm005", "MTH-S203", "bld002", "Medium", 6, "1 big table, 6 chairs, 1 whiteboard on the wall", 40.0, "08:00", "22:00"),
+        ("rm006", "MTH-105", "bld002", "Medium", 6, "1 big table, 6 chairs, 1 whiteboard on the wall", 40.0, "08:00", "22:00"),
+        ("rm007", "MTH-301", "bld002", "Large", 10, "1 meeting room table, 10 chairs, 1 built-in projector", 80.0, "08:00", "22:00"),
+        ("rm008", "WDS-305", "bld003", "Large", 10, "1 meeting room table, 10 chairs, 1 built-in projector", 80.0, "08:00", "22:00"),
     ]
-    for rid, rname, bid, cap, price in rooms_data:
+    for rid, rname, bid, rtype, cap, std_eq, price, opening, closing in rooms_data:
         room = Room(room_id=rid, room_name=rname, building_id=bid,
-                    capacity=cap, price_per_hour=price)
+                    room_type=rtype, capacity=cap, standard_equipment=std_eq,
+                    price_per_hour=price, opening_time=opening, closing_time=closing)
         ds.rooms[room.room_id] = room
-
-    # ── Equipment (distributed across rooms) ────────────
+    # Equipment (distributed across rooms) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     equip_data = [
         ("eq001", "rm001", "Projector"),
         ("eq002", "rm001", "Whiteboard"),
@@ -116,14 +126,13 @@ def init_mock_data(ds):
         ("eq010", "rm006", "Projector"),
         ("eq011", "rm008", "Whiteboard"),
         ("eq012", "rm008", "Monitor"),
-        ("eq013", "rm009", "Projector"),
-        ("eq014", "rm010", "Monitor"),
+
     ]
     for eid, rid, etype in equip_data:
         eq = Equipment(equipment_id=eid, room_id=rid, equipment_type=etype)
         ds.equipment[eq.equipment_id] = eq
 
-    # ── Bookings (varied statuses for realism) ──────────
+    # 鈹€鈹€ Bookings (varied statuses for realism) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     today = datetime.now()
     past1 = (today - timedelta(days=10)).strftime("%Y-%m-%d")
     past2 = (today - timedelta(days=5)).strftime("%Y-%m-%d")
@@ -158,10 +167,10 @@ def init_mock_data(ds):
         ("bk008", "BR-260420-O5P6", "stu005", "rm008", past1,
          "10:00", "12:00", 2.0, 20.0, 20.0, "Completed", "AccountBalance",
          "2026-04-20 09:30:00"),
-        ("bk009", "BR-260423-Q7R8", "stu005", "rm009", past3,
+        ("bk009", "BR-260423-Q7R8", "stu005", "rm007", past3,
          "15:00", "17:00", 2.0, 20.0, 20.0, "Cancelled", "AccountBalance",
          "2026-04-23 14:50:00"),
-        ("bk010", "BR-260424-S9T0", "stu005", "rm010", past4,
+        ("bk010", "BR-260424-S9T0", "stu005", "rm008", past4,
          "11:00", "13:00", 2.0, 20.0, 20.0, "NoShow", "AccountBalance",
          "2026-04-24 10:00:00"),
         ("bk011", "BR-260422-U1V2", "stu007", "rm007", past2,
@@ -184,7 +193,7 @@ def init_mock_data(ds):
         )
         ds.bookings[b.booking_id] = b
 
-    # ── Package Deals ───────────────────────────────────
+    # 鈹€鈹€ Package Deals 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     pd1 = PackageDeal(
         package_id="pd001", student_id="stu003",
         price=100.0, total_hours=12.0, remaining_hours=7.0,
@@ -204,7 +213,7 @@ def init_mock_data(ds):
     ds.package_deals[pd2.package_id] = pd2
     ds.package_deals[pd3.package_id] = pd3
 
-    # ── Equipment Loans (varied states) ─────────────────
+    # 鈹€鈹€ Equipment Loans (varied states) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     el1 = EquipmentLoan(
         loan_id="el001", student_id="stu001", booking_id="bk001",
         equipment_id="eq001", deposit_amount=100.0,
@@ -232,7 +241,7 @@ def init_mock_data(ds):
         eq005.is_damaged = True
         eq005.is_available = False
 
-    # ── Transactions ────────────────────────────────────
+    # 鈹€鈹€ Transactions 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     tx_data = [
         ("tx001", "stu001", 200.00, "TopUp", "2026-04-15 09:00:00",
          "Account top-up of $200.00"),
@@ -298,13 +307,13 @@ def init_mock_data(ds):
         )
         ds.transactions[tx.transaction_id] = tx
 
-    # ── Promo Codes Used ────────────────────────────────
+    # 鈹€鈹€ Promo Codes Used 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     ds.promo_codes_used.add("stu002")
 
     ds.save_all()
 
 
-# ── Query Helper Methods (mixin-style) ──────────────────
+# 鈹€鈹€ Query Helper Methods (mixin-style) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 # These are added as methods to DataService via _attach_helpers
 
 def _get_student_by_email(self, email):
@@ -428,3 +437,6 @@ def attach_helpers(ds):
     ds.check_room_conflict = types.MethodType(_check_room_conflict, ds)
     ds.room_exists_in_building = types.MethodType(_room_exists_in_building, ds)
     ds.get_equipment_loans_for_booking = types.MethodType(_get_equipment_loans_for_booking, ds)
+
+
+

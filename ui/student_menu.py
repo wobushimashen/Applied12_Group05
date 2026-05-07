@@ -1,4 +1,4 @@
-from models.user import Student
+﻿from models.user import Student
 from services.room_service import RoomService
 from services.booking_service import BookingService
 from services.equipment_service import EquipmentService
@@ -64,7 +64,7 @@ class StudentMenu:
             else:
                 print("\n[!] Invalid option. Please try again.")
 
-    # ── Browse and Book ─────────────────────────────────────
+    # 鈹€鈹€ Browse and Book 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _browse_and_book(self, student: Student):
         # Check if banned
         if not student.can_make_booking():
@@ -138,6 +138,24 @@ class StudentMenu:
             for i, room in enumerate(rooms, 1):
                 print(f"  [{i}]  {room.room_name:<15} {room.capacity:<10} ${room.price_per_hour:.2f}")
 
+        # Capacity filter
+        capacity_filter = input("  >> Filter by capacity/party size (or press Enter to skip): ").strip()
+        if capacity_filter:
+            try:
+                min_capacity = int(capacity_filter)
+                rooms = self.room_service.filter_by_capacity(min_capacity, min_capacity, rooms)
+            except ValueError:
+                print("\n[!] Capacity must be a valid number.")
+                return
+            if not rooms:
+                print("\n[!] No rooms available for the selected criteria. Please adjust your filters.")
+                return
+
+            print(f"\n  Rooms matching capacity {min_capacity}:")
+            print(f"  {'#':<4} {'Room':<15} {'Type':<8} {'Capacity':<10} {'Price/hr'}")
+            print("  " + "-" * 50)
+            for i, room in enumerate(rooms, 1):
+                print(f"  [{i}]  {room.room_name:<15} {room.room_type:<8} {room.capacity:<10} ${room.price_per_hour:.2f}")
         # Select room
         print("\n  Select a room to view details or book:")
         try:
@@ -185,7 +203,8 @@ class StudentMenu:
         print(f"  Time:      {start_time} - {end_time}")
         print(f"  Duration:  {duration:.1f} hour(s)")
         print(f"  Cost:      ${total_cost:.2f}")
-        print(f"  Equipment: Table and Chair included")
+        print(f"  Type:      {selected_room.room_type}")
+        print(f"  Equipment: {selected_room.standard_equipment}")
         print("-" * 50)
         print(f"  [1] Pay with Account Balance (${student.account_balance:.2f})")
         package_hours = self.ds.get_package_hours(student.user_id)
@@ -218,7 +237,7 @@ class StudentMenu:
         else:
             print(f"\n[!] {result}")
 
-    # ── My Bookings ─────────────────────────────────────────
+    # 鈹€鈹€ My Bookings 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _my_bookings(self, student: Student):
         bookings = self.booking_service.get_student_bookings(student.user_id)
         buildings = {b.building_id: b.building_name for b in self.ds.buildings.values()}
@@ -246,7 +265,7 @@ class StudentMenu:
             print(f"  [{i}]  {b.booking_reference:<18} {rname:<10} {bname:<10} {b.date:<12} "
                   f"{b.start_time}-{b.end_time:<6} {cost:<10} {b.status}")
 
-    # ── Cancel Booking ──────────────────────────────────────
+    # 鈹€鈹€ Cancel Booking 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _cancel_booking(self, student: Student):
         active_bookings = self.booking_service.get_active_future_bookings(student.user_id)
 
@@ -309,7 +328,7 @@ class StudentMenu:
         else:
             print(f"\n[!] {message}")
 
-    # ── Add Funds ───────────────────────────────────────────
+    # 鈹€鈹€ Add Funds 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _add_funds(self, student: Student):
         print("\n" + "-" * 50)
         print(f"   Add Funds  |  Current Balance: ${student.account_balance:.2f}")
@@ -322,15 +341,15 @@ class StudentMenu:
         else:
             print(f"\n[!] {message}")
 
-    # ── Purchase Package ────────────────────────────────────
+    # 鈹€鈹€ Purchase Package 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _purchase_package(self, student: Student):
         package_hours = self.ds.get_package_hours(student.user_id)
         print("\n" + "-" * 50)
         print("   Package Deal")
         print("-" * 50)
         print(f"  Price:        $100.00 AUD")
-        print(f"  Hours:        12 bookable hours")
-        print(f"  Rate:         ~$8.33/hour (vs $10/hour standard)")
+        print(f"  Hours:        12 bookable hours (Small rooms only)")
+        print(f"  Rate:         ~$8.33/hour for Small rooms")
         print(f"  Expiry:       Never")
         print(f"  Your Balance: ${student.account_balance:.2f}")
         print(f"  Your Hours:   {package_hours:.1f}")
@@ -347,7 +366,7 @@ class StudentMenu:
         else:
             print(f"\n[!] {message}")
 
-    # ── My Profile ──────────────────────────────────────────
+    # 鈹€鈹€ My Profile 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _my_profile(self, student: Student):
         package_hours = self.ds.get_package_hours(student.user_id)
         active_count = len(self.ds.get_active_future_bookings(student.user_id))
@@ -360,7 +379,7 @@ class StudentMenu:
         print(f"  Email:          {student.email}")
         print(f"  Mobile:         {student.mobile_number}")
         print(f"  Balance:        ${student.account_balance:.2f}")
-        print(f"  Package Hours:  {package_hours:.1f}")
+        print(f"  Package Hours:  {package_hours:.1f} (Small rooms only)")
         print(f"  Active Bookings: {active_count}/3")
         print(f"  Late Cancellations: {student.late_cancellation_count}")
         print(f"  No-Shows:       {student.no_show_count}")
@@ -370,7 +389,7 @@ class StudentMenu:
             print(f"  [!] BANNED until {student.ban_end_date}")
         print("-" * 50)
 
-    # ── Transaction History ─────────────────────────────────
+    # 鈹€鈹€ Transaction History 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _transaction_history(self, student: Student):
         transactions = self.payment_service.get_transaction_history(student.user_id)
 
@@ -388,7 +407,7 @@ class StudentMenu:
             print(f"  {t.transaction_date:<20} {t.transaction_type:<20} "
                   f"{sign}${t.amount:<10.2f} {t.description}")
 
-    # ── Borrow Equipment ────────────────────────────────────
+    # 鈹€鈹€ Borrow Equipment 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _borrow_equipment(self, student: Student):
         active_now = self.ds.get_active_now_bookings(student.user_id)
         if not active_now:
@@ -451,7 +470,7 @@ class StudentMenu:
 
         print("\n[!] No active sessions found.")
 
-    # ── Return Equipment ────────────────────────────────────
+    # 鈹€鈹€ Return Equipment 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _return_equipment(self, student: Student):
         active_loans = self.equipment_service.get_active_loans_for_student(student.user_id)
         if not active_loans:
@@ -493,7 +512,7 @@ class StudentMenu:
         else:
             print(f"\n[!] {message}")
 
-    # ── Room Details ────────────────────────────────────────
+    # 鈹€鈹€ Room Details 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _show_room_details(self, room_id):
         """Display detailed room information including equipment."""
         details = self.room_service.get_room_details(room_id)
@@ -509,7 +528,9 @@ class StudentMenu:
         print(f"  Capacity:    {room.capacity} people")
         print(f"  Price:       ${room.price_per_hour:.2f}/hour")
         print(f"  Status:      {'Available' if room.is_available else 'Unavailable'}")
-        print(f"  Equipment:   Table and Chair (included)")
+        print(f"  Type:        {room.room_type}")
+        print(f"  Equipment:   {room.standard_equipment}")
+        print(f"  Open Hours:  {room.opening_time} - {room.closing_time}")
 
         if details["available_equipment"]:
             print(f"\n  Optional Equipment Available:")
@@ -525,3 +546,6 @@ class StudentMenu:
             print(f"\n  No optional equipment in this room.")
 
         print("-" * 50)
+
+
+

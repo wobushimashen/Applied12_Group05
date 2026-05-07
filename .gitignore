@@ -120,3 +120,6 @@ fabric.properties
 
 DS_Store
 
+
+data/
+tmp_smoke_test_27apr.py

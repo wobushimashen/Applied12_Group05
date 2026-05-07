@@ -1,3 +1,5 @@
+﻿from datetime import datetime
+
 from models.room import Room
 
 
@@ -5,11 +7,9 @@ class RoomService:
     def __init__(self, data_service):
         self.ds = data_service
 
-    # ── Admin Operations ────────────────────────────────────
-    def create_room(self, room_name, building_name, capacity):
+    def create_room(self, room_name, building_name, capacity=None, room_type="Small"):
         building = self.ds.get_building_by_name(building_name)
         if not building:
-            # Auto-create building
             from models.building import Building
             building = Building(building_name=building_name)
             self.ds.buildings[building.building_id] = building
@@ -17,6 +17,10 @@ class RoomService:
         if self.ds.room_exists_in_building(room_name, building.building_id):
             return False, "A room with this name already exists in this building."
 
+        room_type = Room.normalize_room_type(room_type, capacity or 2)
+        defaults = Room.defaults_for_type(room_type)
+        if capacity in (None, ""):
+            capacity = defaults["capacity"]
         try:
             capacity = int(capacity)
             if capacity <= 0:
@@ -27,15 +31,19 @@ class RoomService:
         room = Room(
             room_name=room_name,
             building_id=building.building_id,
+            room_type=room_type,
             capacity=capacity,
-            price_per_hour=10.0,
+            standard_equipment=defaults["standard_equipment"],
+            price_per_hour=defaults["price_per_hour"],
         )
         self.ds.rooms[room.room_id] = room
         self.ds.save_all()
         return True, room
 
     def update_room(self, room_id, new_room_name=None, new_building_name=None,
-                    new_capacity=None, new_is_available=None):
+                    new_capacity=None, new_is_available=None,
+                    new_standard_equipment=None, new_opening_time=None,
+                    new_closing_time=None):
         room = self.ds.rooms.get(room_id)
         if not room:
             return False, "Room not found."
@@ -51,13 +59,26 @@ class RoomService:
                 self.ds.buildings[building.building_id] = building
             room.building_id = building.building_id
 
-        if new_capacity is not None:
+        if new_capacity is not None and str(new_capacity).strip():
             try:
                 cap = int(new_capacity)
                 if cap > 0:
                     room.capacity = cap
             except ValueError:
-                pass
+                return False, "Capacity must be a valid number."
+
+        if new_standard_equipment and new_standard_equipment.strip():
+            room.standard_equipment = new_standard_equipment.strip()
+
+        if new_opening_time and new_opening_time.strip():
+            if not self._valid_time(new_opening_time.strip()):
+                return False, "Opening time must use HH:MM format."
+            room.opening_time = new_opening_time.strip()
+
+        if new_closing_time and new_closing_time.strip():
+            if not self._valid_time(new_closing_time.strip()):
+                return False, "Closing time must use HH:MM format."
+            room.closing_time = new_closing_time.strip()
 
         if new_is_available is not None:
             room.is_available = new_is_available
@@ -71,9 +92,10 @@ class RoomService:
             return False, "Room not found."
 
         if self.ds.has_room_future_bookings(room_id):
-            return False, "Cannot remove a room with future active bookings."
+            room.is_available = False
+            self.ds.save_all()
+            return True, "Room has future active bookings, so it was marked unavailable instead of deleted."
 
-        # Remove equipment associated with this room
         eq_to_remove = [eid for eid, e in self.ds.equipment.items()
                         if e.room_id == room_id]
         for eid in eq_to_remove:
@@ -86,7 +108,6 @@ class RoomService:
     def get_all_rooms(self):
         return list(self.ds.rooms.values())
 
-    # ── Student Operations ──────────────────────────────────
     def browse_rooms(self):
         return [r for r in self.ds.rooms.values() if r.is_available]
 
@@ -95,6 +116,8 @@ class RoomService:
             rooms = self.browse_rooms()
         available = []
         for room in rooms:
+            if not self._within_opening_hours(room, start_time, end_time):
+                continue
             if not self.ds.check_room_conflict(room.room_id, date, start_time, end_time):
                 available.append(room)
         return available
@@ -117,7 +140,6 @@ class RoomService:
         return self.ds.rooms.get(room_id)
 
     def get_room_details(self, room_id):
-        """Get full room details including building name and equipment list."""
         room = self.ds.rooms.get(room_id)
         if not room:
             return None
@@ -138,7 +160,18 @@ class RoomService:
         }
 
     def filter_by_capacity(self, min_capacity, max_capacity, rooms=None):
-        """Filter rooms by capacity range."""
         if rooms is None:
             rooms = self.browse_rooms()
-        return [r for r in rooms if min_capacity <= r.capacity <= max_capacity]
+        return [r for r in rooms
+                if r.min_capacity <= max_capacity and min_capacity <= r.max_capacity]
+
+    def _valid_time(self, value):
+        try:
+            datetime.strptime(value, "%H:%M")
+            return True
+        except ValueError:
+            return False
+
+    def _within_opening_hours(self, room, start_time, end_time):
+        return room.opening_time <= start_time and end_time <= room.closing_time
+
