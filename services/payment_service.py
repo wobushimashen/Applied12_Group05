@@ -10,10 +10,10 @@ class PaymentService:
         try:
             amount = float(amount_str)
         except ValueError:
-            return False, "Please enter a valid positive amount."
+            return False, "Please enter an amount between $0.01 and $1000."
 
-        if amount <= 0:
-            return False, "Please enter a valid positive amount."
+        if amount < 0.01:
+            return False, "Minimum top-up amount is $0.01."
         if amount > 1000:
             return False, "Maximum top-up amount is $1000 per transaction."
 
