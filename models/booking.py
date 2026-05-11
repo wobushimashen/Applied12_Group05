@@ -34,8 +34,15 @@ class Booking:
 
     def is_future(self):
         try:
-            booking_datetime = datetime.strptime(f"{self.date} {self.end_time}", "%Y-%m-%d %H:%M")
-            return datetime.now() < booking_datetime and self.status == self.STATUS_ACTIVE
+            booking_start = datetime.strptime(f"{self.date} {self.start_time}", "%Y-%m-%d %H:%M")
+            return datetime.now() < booking_start and self.status == self.STATUS_ACTIVE
+        except ValueError:
+            return False
+
+    def has_ended(self):
+        try:
+            booking_end = datetime.strptime(f"{self.date} {self.end_time}", "%Y-%m-%d %H:%M")
+            return datetime.now() > booking_end
         except ValueError:
             return False
 

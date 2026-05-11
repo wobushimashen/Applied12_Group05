@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from models.booking import Booking
+from models.room import Room
 from models.transaction import Transaction
 
 
@@ -19,17 +20,22 @@ class BookingService:
             return False, "End time must be after start time."
 
         duration_hours = (end - start).total_seconds() / 3600
-        if duration_hours < 1:
-            return False, "Minimum booking duration is 1 hour."
+        if duration_hours < 0.5:
+            return False, "Minimum booking duration is 0.5 hour."
 
-        # Check 30-minute increments
         if start.minute % 30 != 0 or end.minute % 30 != 0:
             return False, "Times must be in 30-minute increments (e.g., 09:00, 09:30)."
+
+        if start <= datetime.now():
+            return False, "Booking start time must be in the future."
 
         return True, duration_hours
 
     def checkout(self, student, room_id, date, start_time, end_time,
                  payment_method, promo_code=None):
+        if not student.can_make_booking():
+            return False, f"You are currently banned from booking until {student.ban_end_date}."
+
         # Check max 3 future bookings
         active_bookings = self.ds.get_active_future_bookings(student.user_id)
         if len(active_bookings) >= 3:
@@ -40,6 +46,11 @@ class BookingService:
         if not valid:
             return False, result
         duration = result
+        start = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
+        end = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M")
+        date = start.strftime("%Y-%m-%d")
+        start_time = start.strftime("%H:%M")
+        end_time = end.strftime("%H:%M")
 
         # Check room exists and available
         room = self.ds.rooms.get(room_id)
@@ -48,15 +59,26 @@ class BookingService:
         if not room.is_available:
             return False, "This room is no longer available."
 
+        room_rule_ok, room_rule_message = self._validate_room_rules(
+            room, date, start_time, end_time, duration, start)
+        if not room_rule_ok:
+            return False, room_rule_message
+
         # Re-check conflict at checkout time (AC: room becomes unavailable between selection and checkout)
         if self.ds.check_room_conflict(room_id, date, start_time, end_time):
             return False, "This room is no longer available for the selected time."
 
         total_cost = duration * room.price_per_hour
 
+        normalized_promo = promo_code.strip().upper() if promo_code else ""
+        if normalized_promo == "NEWBIE20" and payment_method != "1":
+            return False, "Promo code NEWBIE20 can only be used with account balance payments."
+        if normalized_promo == "NEWBIE20" and room.room_type != Room.TYPE_SMALL:
+            return False, "Promo code NEWBIE20 can only be used for Small rooms."
+
         # Apply promo code if provided
         discount = 0
-        if promo_code and promo_code.strip().upper() == "NEWBIE20":
+        if normalized_promo == "NEWBIE20":
             if student.user_id in self.ds.promo_codes_used:
                 return False, "This promo code has already been used."
             if len(self.ds.get_bookings_for_student(student.user_id)) > 0:
@@ -73,6 +95,8 @@ class BookingService:
             student.account_balance -= final_cost
             pay_method = Booking.PAYMENT_BALANCE
         elif payment_method == "2":  # Package hours
+            if room.room_type != Room.TYPE_SMALL:
+                return False, "Package hours can only be used for Small rooms."
             package_hours = self.ds.get_package_hours(student.user_id)
             if package_hours < duration:
                 return False, "Insufficient package hours. Please purchase more hours or use account balance."
@@ -108,7 +132,7 @@ class BookingService:
             self.ds.transactions[tx.transaction_id] = tx
 
         # Mark promo code used
-        if promo_code and promo_code.strip().upper() == "NEWBIE20" and discount > 0:
+        if normalized_promo == "NEWBIE20" and discount > 0:
             self.ds.promo_codes_used.add(student.user_id)
             tx_promo = Transaction(
                 student_id=student.user_id,
@@ -138,25 +162,18 @@ class BookingService:
                                           "%Y-%m-%d %H:%M")
         time_diff = (booking_start - now).total_seconds() / 60  # minutes
 
-        is_late = time_diff <= 30
+        room = self.ds.rooms.get(booking.room_id)
+        late_threshold = room.late_cancellation_threshold_minutes if room else 30
+        refund_rate = 1.0
+        is_late = time_diff <= late_threshold
+        if is_late and room:
+            refund_rate = room.late_cancellation_refund_rate
 
         # Update booking status
         booking.status = Booking.STATUS_CANCELLED
 
-        # Process refund (refund original cost, not discounted cost)
-        refund_amount = booking.original_cost
-        if booking.payment_method == Booking.PAYMENT_BALANCE:
-            student.account_balance += refund_amount
-            tx = Transaction(
-                student_id=student.user_id,
-                amount=refund_amount,
-                transaction_type=Transaction.TYPE_BOOKING_REFUND,
-                description=f"Refund for cancelled booking {booking.booking_reference}",
-            )
-            self.ds.transactions[tx.transaction_id] = tx
-        elif booking.payment_method == Booking.PAYMENT_PACKAGE:
-            self.ds.restore_package_hours(student.user_id, booking.duration)
-            refund_amount = 0  # Hours restored, not money
+        refund_amount, restored_hours = self._apply_booking_refund(
+            student, booking, refund_rate, "cancelled booking")
 
         if is_late:
             banned = student.add_strike("late_cancellation")
@@ -165,9 +182,10 @@ class BookingService:
 
             # Build detailed confirmation message per AC
             if booking.payment_method == Booking.PAYMENT_PACKAGE:
-                refund_msg = f"Package hours ({booking.duration:.1f}) restored."
+                refund_msg = f"Package hours ({restored_hours:.1f}) restored."
             else:
-                refund_msg = f"Refund of ${refund_amount:.2f} processed."
+                refund_percent = int(refund_rate * 100)
+                refund_msg = f"{refund_percent}% refund of ${refund_amount:.2f} processed."
 
             msg = (f"Late Cancellation recorded. {refund_msg}\n"
                    f"    Strikes: {total_strikes}/3. ")
@@ -180,13 +198,14 @@ class BookingService:
             self.ds.save_all()
             if booking.payment_method == Booking.PAYMENT_PACKAGE:
                 return True, (f"Booking {booking.booking_reference} cancelled. "
-                              f"Package hours ({booking.duration:.1f}) restored.")
+                              f"Package hours ({restored_hours:.1f}) restored.")
             else:
                 return True, (f"Booking {booking.booking_reference} cancelled. "
                               f"Full refund of ${refund_amount:.2f} processed.")
 
     def mark_no_show(self, booking, student):
         booking.status = Booking.STATUS_NO_SHOW
+        self._apply_no_show_refund(student, booking)
         banned = student.add_strike("no_show")
         self.ds.save_all()
         return banned
@@ -203,7 +222,9 @@ class BookingService:
         booking_start = datetime.strptime(f"{booking.date} {booking.start_time}",
                                           "%Y-%m-%d %H:%M")
         time_diff = (booking_start - now).total_seconds() / 60
-        if time_diff > 30:
+        room = self.ds.rooms.get(booking.room_id)
+        late_threshold = room.late_cancellation_threshold_minutes if room else 30
+        if time_diff > late_threshold:
             return "Standard Cancellation"
         else:
             return "Late Cancellation"
@@ -231,11 +252,8 @@ class BookingService:
             if now <= booking_end:
                 continue
 
-            # Check if student borrowed equipment during this booking
-            active_loans = [el for el in self.ds.equipment_loans.values()
-                            if el.booking_id == booking.booking_id and not el.is_returned]
-            if active_loans:
-                continue  # Still has equipment, not a no-show
+            if self._booking_has_any_equipment_loan(booking.booking_id):
+                continue
 
             # Mark as no-show
             student = self.ds.users.get(booking.student_id)
@@ -243,6 +261,7 @@ class BookingService:
                 continue
 
             booking.status = Booking.STATUS_NO_SHOW
+            self._apply_no_show_refund(student, booking)
             banned = student.add_strike("no_show")
             no_shows.append((booking, student, banned))
 
@@ -258,19 +277,26 @@ class BookingService:
             return False, "Booking not found."
         if booking.status != Booking.STATUS_ACTIVE:
             return False, "This booking is not active."
-        if booking.is_future():
-            return False, "Cannot mark a future booking as no-show."
+        if not booking.has_ended():
+            return False, "Cannot mark a booking as no-show before it has ended."
+        if self._booking_has_any_equipment_loan(booking.booking_id):
+            return False, "Cannot mark as no-show because equipment was borrowed during this booking."
 
         student = self.ds.users.get(booking.student_id)
         if not student or not hasattr(student, 'add_strike'):
             return False, "Student not found."
 
         booking.status = Booking.STATUS_NO_SHOW
+        refund_amount, restored_hours = self._apply_no_show_refund(student, booking)
         banned = student.add_strike("no_show")
         total_strikes = student.late_cancellation_count + student.no_show_count
         self.ds.save_all()
 
         msg = f"Booking {booking.booking_reference} marked as No-Show. "
+        if booking.payment_method == Booking.PAYMENT_PACKAGE and restored_hours > 0:
+            msg += f"{restored_hours:.1f} package hours restored. "
+        elif refund_amount > 0:
+            msg += f"No-show refund of ${refund_amount:.2f} processed. "
         msg += f"Strikes: {total_strikes}/3. "
         if banned:
             msg += f"Student banned until {student.ban_end_date}."
@@ -288,8 +314,65 @@ class BookingService:
                 continue
             try:
                 end = datetime.strptime(f"{b.date} {b.end_time}", "%Y-%m-%d %H:%M")
-                if now > end:
+                if now > end and not self._booking_has_any_equipment_loan(b.booking_id):
                     overdue.append(b)
             except ValueError:
                 continue
         return overdue
+
+    def _booking_has_any_equipment_loan(self, booking_id):
+        return any(el.booking_id == booking_id for el in self.ds.equipment_loans.values())
+
+    def _validate_room_rules(self, room, date, start_time, end_time, duration, start):
+        if not self._room_is_open_for_slot(room, date, start_time, end_time):
+            return False, (f"Bookings for {room.room_name} must be within opening hours "
+                           f"{room.opening_time}-{room.closing_time}.")
+
+        if duration < room.minimum_duration:
+            return False, (f"{room.room_type} rooms require a minimum booking duration "
+                           f"of {room.minimum_duration:.1f} hour(s).")
+
+        notice_hours = (start - datetime.now()).total_seconds() / 3600
+        if notice_hours < room.advance_notice_hours:
+            return False, (f"{room.room_type} rooms require at least "
+                           f"{room.advance_notice_hours:.0f} hour(s) advance notice.")
+
+        return True, ""
+
+    def _room_is_open_for_slot(self, room, date, start_time, end_time):
+        try:
+            requested_start = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
+            requested_end = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M")
+            opening = datetime.strptime(f"{date} {room.opening_time}", "%Y-%m-%d %H:%M")
+            closing = datetime.strptime(f"{date} {room.closing_time}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            return False
+        return opening <= requested_start and requested_end <= closing
+
+    def _apply_booking_refund(self, student, booking, refund_rate, reason):
+        refund_rate = max(0.0, min(1.0, float(refund_rate)))
+        refund_amount = 0.0
+        restored_hours = 0.0
+
+        if booking.payment_method == Booking.PAYMENT_BALANCE:
+            refund_amount = round(booking.total_cost * refund_rate, 2)
+            if refund_amount > 0:
+                student.account_balance += refund_amount
+                tx = Transaction(
+                    student_id=student.user_id,
+                    amount=refund_amount,
+                    transaction_type=Transaction.TYPE_BOOKING_REFUND,
+                    description=f"Refund for {reason} {booking.booking_reference}",
+                )
+                self.ds.transactions[tx.transaction_id] = tx
+        elif booking.payment_method == Booking.PAYMENT_PACKAGE:
+            restored_hours = round(booking.duration * refund_rate, 1)
+            if restored_hours > 0:
+                self.ds.restore_package_hours(student.user_id, restored_hours)
+
+        return refund_amount, restored_hours
+
+    def _apply_no_show_refund(self, student, booking):
+        room = self.ds.rooms.get(booking.room_id)
+        refund_rate = room.no_show_refund_rate if room else 0.0
+        return self._apply_booking_refund(student, booking, refund_rate, "no-show booking")

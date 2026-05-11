@@ -72,8 +72,21 @@ def init_mock_data(ds):
         student_id="36668008", mobile_number="0478901234",
         account_balance=12.00,
     )
+    student1 = Student(
+        user_id="student1", email="student1@student.monash.edu",
+        password="Student123!", first_name="Student", last_name="One",
+        student_id="36668101", mobile_number="0411111111",
+        account_balance=150.00,
+    )
+    student2 = Student(
+        user_id="student2", email="student2@student.monash.edu",
+        password="Student123!", first_name="Student", last_name="Two",
+        student_id="36668102", mobile_number="0422222222",
+        account_balance=120.00,
+    )
 
-    for s in [alice, bob, charlie, diana, ethan, fiona, george, hannah]:
+    for s in [alice, bob, charlie, diana, ethan, fiona, george, hannah,
+              student1, student2]:
         ds.users[s.user_id] = s
 
     # ── Buildings (3 Monash campus buildings) ───────────
@@ -86,20 +99,20 @@ def init_mock_data(ds):
 
     # ── Rooms (10 rooms across 3 buildings) ─────────────
     rooms_data = [
-        ("rm001", "LTB-214", "bld001", 2, 10.0),
-        ("rm002", "LTB-305", "bld001", 2, 10.0),
-        ("rm003", "LTB-110", "bld001", 2, 10.0),
-        ("rm004", "MTH-S201", "bld002", 2, 10.0),
-        ("rm005", "MTH-S203", "bld002", 2, 10.0),
-        ("rm006", "MTH-105", "bld002", 2, 10.0),
-        ("rm007", "MTH-301", "bld002", 2, 10.0),
-        ("rm008", "WDS-305", "bld003", 2, 10.0),
-        ("rm009", "WDS-201", "bld003", 2, 10.0),
-        ("rm010", "WDS-102", "bld003", 2, 10.0),
+        ("rm001", "LTB-214", "bld001", "Small"),
+        ("rm002", "LTB-305", "bld001", "Small"),
+        ("rm003", "LTB-110", "bld001", "Small"),
+        ("rm004", "MTH-M201", "bld002", "Medium"),
+        ("rm005", "MTH-M203", "bld002", "Medium"),
+        ("rm006", "MTH-M105", "bld002", "Medium"),
+        ("rm007", "MTH-M301", "bld002", "Medium"),
+        ("rm008", "WDS-L305", "bld003", "Large"),
+        ("rm009", "WDS-L201", "bld003", "Large"),
+        ("rm010", "WDS-L102", "bld003", "Large"),
     ]
-    for rid, rname, bid, cap, price in rooms_data:
+    for rid, rname, bid, room_type in rooms_data:
         room = Room(room_id=rid, room_name=rname, building_id=bid,
-                    capacity=cap, price_per_hour=price)
+                    room_type=room_type)
         ds.rooms[room.room_id] = room
 
     # ── Equipment (distributed across rooms) ────────────
@@ -138,40 +151,40 @@ def init_mock_data(ds):
          "10:00", "12:00", 2.0, 20.0, 20.0, "Completed", "AccountBalance",
          "2026-04-20 09:00:00"),
         ("bk002", "BR-260425-C3D4", "stu001", "rm004", future1,
-         "14:00", "16:00", 2.0, 20.0, 20.0, "Active", "AccountBalance",
+         "14:00", "16:00", 2.0, 80.0, 80.0, "Active", "AccountBalance",
          "2026-04-25 11:00:00"),
         ("bk003", "BR-260418-E5F6", "stu002", "rm002", past2,
          "09:00", "11:00", 2.0, 16.0, 20.0, "Completed", "AccountBalance",
          "2026-04-18 08:30:00"),
         ("bk004", "BR-260422-G7H8", "stu002", "rm005", past3,
-         "13:00", "15:00", 2.0, 20.0, 20.0, "Cancelled", "AccountBalance",
+         "13:00", "15:00", 2.0, 80.0, 80.0, "Cancelled", "AccountBalance",
          "2026-04-22 10:00:00"),
         ("bk005", "BR-260419-I9J0", "stu003", "rm001", past1,
          "14:00", "17:00", 3.0, 30.0, 30.0, "Completed", "PackageHours",
          "2026-04-19 13:00:00"),
-        ("bk006", "BR-260421-K1L2", "stu003", "rm006", past4,
+        ("bk006", "BR-260421-K1L2", "stu003", "rm002", past4,
          "10:00", "12:00", 2.0, 20.0, 20.0, "Completed", "PackageHours",
          "2026-04-21 09:30:00"),
-        ("bk007", "BR-260426-M3N4", "stu003", "rm004", future2,
+        ("bk007", "BR-260426-M3N4", "stu003", "rm003", future2,
          "09:00", "12:00", 3.0, 30.0, 30.0, "Active", "PackageHours",
          "2026-04-26 08:00:00"),
         ("bk008", "BR-260420-O5P6", "stu005", "rm008", past1,
-         "10:00", "12:00", 2.0, 20.0, 20.0, "Completed", "AccountBalance",
+         "10:00", "12:00", 2.0, 160.0, 160.0, "Completed", "AccountBalance",
          "2026-04-20 09:30:00"),
         ("bk009", "BR-260423-Q7R8", "stu005", "rm009", past3,
-         "15:00", "17:00", 2.0, 20.0, 20.0, "Cancelled", "AccountBalance",
+         "15:00", "17:00", 2.0, 160.0, 160.0, "Cancelled", "AccountBalance",
          "2026-04-23 14:50:00"),
         ("bk010", "BR-260424-S9T0", "stu005", "rm010", past4,
-         "11:00", "13:00", 2.0, 20.0, 20.0, "NoShow", "AccountBalance",
+         "11:00", "13:00", 2.0, 160.0, 160.0, "NoShow", "AccountBalance",
          "2026-04-24 10:00:00"),
         ("bk011", "BR-260422-U1V2", "stu007", "rm007", past2,
-         "10:00", "13:00", 3.0, 30.0, 30.0, "Completed", "AccountBalance",
+         "10:00", "13:00", 3.0, 120.0, 120.0, "Completed", "AccountBalance",
          "2026-04-22 09:00:00"),
         ("bk012", "BR-260427-W3X4", "stu007", "rm001", future1,
          "09:00", "11:00", 2.0, 20.0, 20.0, "Active", "AccountBalance",
          "2026-04-27 08:00:00"),
         ("bk013", "BR-260427-Y5Z6", "stu007", "rm008", future3,
-         "14:00", "16:00", 2.0, 20.0, 20.0, "Active", "AccountBalance",
+         "14:00", "16:00", 2.0, 160.0, 160.0, "Active", "AccountBalance",
          "2026-04-27 08:30:00"),
     ]
 
@@ -244,15 +257,15 @@ def init_mock_data(ds):
          "Equipment deposit for Projector (eq001)"),
         ("tx005", "stu001", 100.00, "DepositRefund", "2026-04-20 12:05:00",
          "Equipment deposit refund for Projector"),
-        ("tx006", "stu001", 20.00, "BookingPayment", "2026-04-25 11:00:00",
-         "Booking BR-260425-C3D4 - MTH-S201"),
+        ("tx006", "stu001", 80.00, "BookingPayment", "2026-04-25 11:00:00",
+         "Booking BR-260425-C3D4 - MTH-M201"),
         ("tx007", "stu002", 50.00, "TopUp", "2026-04-17 11:00:00",
          "Account top-up of $50.00"),
         ("tx008", "stu002", 16.00, "BookingPayment", "2026-04-18 08:30:00",
          "Booking BR-260418-E5F6 - LTB-305"),
         ("tx009", "stu002", 4.00, "PromoDiscount", "2026-04-18 08:30:00",
          "NEWBIE20 discount on BR-260418-E5F6"),
-        ("tx010", "stu002", 20.00, "BookingRefund", "2026-04-22 12:00:00",
+        ("tx010", "stu002", 80.00, "BookingRefund", "2026-04-22 12:00:00",
          "Refund for cancelled booking BR-260422-G7H8"),
         ("tx011", "stu003", 300.00, "TopUp", "2026-04-08 10:00:00",
          "Account top-up of $300.00"),
@@ -268,9 +281,9 @@ def init_mock_data(ds):
          "Equipment deposit refund for Whiteboard"),
         ("tx017", "stu005", 100.00, "TopUp", "2026-04-19 08:00:00",
          "Account top-up of $100.00"),
-        ("tx018", "stu005", 20.00, "BookingPayment", "2026-04-20 09:30:00",
-         "Booking BR-260420-O5P6 - WDS-305"),
-        ("tx019", "stu005", 20.00, "BookingRefund", "2026-04-23 14:55:00",
+        ("tx018", "stu005", 160.00, "BookingPayment", "2026-04-20 09:30:00",
+         "Booking BR-260420-O5P6 - WDS-L305"),
+        ("tx019", "stu005", 160.00, "BookingRefund", "2026-04-23 14:55:00",
          "Refund for cancelled booking BR-260423-Q7R8"),
         ("tx020", "stu006", 300.00, "TopUp", "2026-04-05 10:00:00",
          "Account top-up of $300.00"),
@@ -280,8 +293,8 @@ def init_mock_data(ds):
          "Account top-up of $500.00"),
         ("tx023", "stu007", 100.00, "PackagePurchase", "2026-04-18 09:00:00",
          "Package Deal purchase: $100 for 12 hours"),
-        ("tx024", "stu007", 30.00, "BookingPayment", "2026-04-22 09:00:00",
-         "Booking BR-260422-U1V2 - MTH-301"),
+        ("tx024", "stu007", 120.00, "BookingPayment", "2026-04-22 09:00:00",
+         "Booking BR-260422-U1V2 - MTH-M301"),
         ("tx025", "stu007", 100.00, "DepositCharge", "2026-04-22 10:20:00",
          "Equipment deposit for Monitor (eq005)"),
         ("tx026", "stu007", 0.00, "DepositCharge", "2026-04-22 13:10:00",
@@ -384,16 +397,26 @@ def _restore_package_hours(self, student_id, hours):
 
 def _has_room_future_bookings(self, room_id):
     for b in self.bookings.values():
-        if b.room_id == room_id and b.is_future():
+        if b.room_id == room_id and (b.is_future() or b.is_active_now()):
             return True
     return False
 
 
 def _check_room_conflict(self, room_id, date, start_time, end_time):
+    try:
+        requested_start = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
+        requested_end = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        return False
+
     for b in self.bookings.values():
-        if (b.room_id == room_id and b.date == date
-                and b.status == Booking.STATUS_ACTIVE):
-            if not (end_time <= b.start_time or start_time >= b.end_time):
+        if b.room_id == room_id and b.status == Booking.STATUS_ACTIVE:
+            try:
+                existing_start = datetime.strptime(f"{b.date} {b.start_time}", "%Y-%m-%d %H:%M")
+                existing_end = datetime.strptime(f"{b.date} {b.end_time}", "%Y-%m-%d %H:%M")
+            except ValueError:
+                continue
+            if requested_start < existing_end and requested_end > existing_start:
                 return True
     return False
 

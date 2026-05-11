@@ -59,12 +59,15 @@ class AdminMenu:
             print("  No rooms in the system.")
             return
 
-        print(f"  {'Room Name':<15} {'Building':<12} {'Capacity':<10} {'Price/hr':<10} {'Available'}")
-        print("  " + "-" * 55)
+        print(f"  {'Room ID':<10} {'Room Name':<15} {'Type':<8} {'Building':<12} "
+              f"{'Capacity':<10} {'Hours':<13} {'Price/hr':<10} {'Available'}")
+        print("  " + "-" * 93)
         for room in rooms:
             bname = buildings.get(room.building_id, "Unknown")
             avail = "Yes" if room.is_available else "No"
-            print(f"  {room.room_name:<15} {bname:<12} {room.capacity:<10} ${room.price_per_hour:<9.2f} {avail}")
+            print(f"  {room.room_id:<10} {room.room_name:<15} {room.room_type:<8} {bname:<12} "
+                  f"{room.capacity_range:<10} {room.opening_time}-{room.closing_time:<5} "
+                  f"${room.price_per_hour:<9.2f} {avail}")
 
     def _create_room(self):
         print("\n" + "-" * 50)
@@ -72,16 +75,18 @@ class AdminMenu:
         print("-" * 50)
         room_name = input(">> Room Name/Number: ").strip()
         building_name = input(">> Building Name: ").strip()
-        capacity = input(">> Capacity: ").strip()
+        room_type = input(">> Room Type (Small/Medium/Large): ").strip()
 
-        success, result = self.room_service.create_room(room_name, building_name, capacity)
+        success, result = self.room_service.create_room(
+            room_name, building_name, room_type=room_type)
         if success:
             room = result
             print(f"\n[+] Room '{room.room_name}' created successfully!")
             print(f"    Building: {building_name}")
-            print(f"    Capacity: {room.capacity}")
+            print(f"    Type: {room.room_type}")
+            print(f"    Capacity: {room.capacity_range}")
             print(f"    Price: ${room.price_per_hour}/hour")
-            print(f"    Default equipment: Table and Chair set included")
+            print(f"    Standard equipment: {room.standard_equipment}")
         else:
             print(f"\n[!] {result}")
 
@@ -107,6 +112,16 @@ class AdminMenu:
         print(f"  Current Capacity: {room.capacity}")
         new_capacity = input(">> New Capacity (leave blank to keep): ").strip()
 
+        print(f"  Current Type: {room.room_type}")
+        new_type = input(">> New Type Small/Medium/Large (leave blank to keep): ").strip()
+
+        print(f"  Current Standard Equipment: {room.standard_equipment}")
+        new_equipment = input(">> New Standard Equipment (leave blank to keep): ").strip()
+
+        print(f"  Current Opening Hours: {room.opening_time}-{room.closing_time}")
+        new_open = input(">> New Opening Time HH:MM (leave blank to keep): ").strip()
+        new_close = input(">> New Closing Time HH:MM (leave blank to keep): ").strip()
+
         print(f"  Current Available: {'Yes' if room.is_available else 'No'}")
         new_avail_str = input(">> Available? (y/n, leave blank to keep): ").strip()
         new_avail = None
@@ -121,12 +136,18 @@ class AdminMenu:
             new_building_name=new_building or None,
             new_capacity=new_capacity or None,
             new_is_available=new_avail,
+            new_room_type=new_type or None,
+            new_standard_equipment=new_equipment or None,
+            new_opening_time=new_open or None,
+            new_closing_time=new_close or None,
         )
         if success:
             room = result
             print(f"\n[+] Room updated successfully!")
             print(f"    Name: {room.room_name}")
-            print(f"    Capacity: {room.capacity}")
+            print(f"    Type: {room.room_type}")
+            print(f"    Capacity: {room.capacity_range}")
+            print(f"    Opening Hours: {room.opening_time}-{room.closing_time}")
             print(f"    Available: {'Yes' if room.is_available else 'No'}")
         else:
             print(f"\n[!] {result}")
@@ -187,8 +208,6 @@ class AdminMenu:
 
     def _manage_bookings(self):
         """Admin can review overdue bookings and mark no-shows."""
-        from models.booking import Booking
-
         overdue = self.booking_service.get_overdue_bookings()
 
         print("\n" + "-" * 60)
@@ -222,7 +241,6 @@ class AdminMenu:
                 ok, msg = self.booking_service.mark_no_show_admin(b.booking_id)
                 if ok:
                     print(f"\n[+] {msg}")
-            self.ds.save_all()
         elif choice.upper() == "S":
             try:
                 sel = int(input(">> Select booking (#): ").strip())

@@ -43,19 +43,26 @@ class DataService:
         if not os.path.exists(filepath):
             return []
         rows = []
-        with open(filepath, "r", newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                rows.append(row)
+        try:
+            with open(filepath, "r", newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    rows.append(row)
+        except (OSError, csv.Error) as exc:
+            print(f"[!] Could not read {filename}: {exc}")
+            return []
         return rows
 
     def _write_csv(self, filename, fieldnames, records):
         filepath = self._path(filename)
-        with open(filepath, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            for record in records:
-                writer.writerow(record)
+        try:
+            with open(filepath, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                for record in records:
+                    writer.writerow(record)
+        except (OSError, csv.Error) as exc:
+            print(f"[!] Could not write {filename}: {exc}")
 
     # ── Load All Data ───────────────────────────────────────
     def _load_all(self):
@@ -108,8 +115,20 @@ class DataService:
             r = Room(
                 room_id=row["room_id"], room_name=row["room_name"],
                 building_id=row["building_id"],
+                room_type=row.get("room_type", ""),
+                capacity_min=row.get("capacity_min"),
+                capacity_max=row.get("capacity_max"),
                 capacity=row.get("capacity", 2),
                 price_per_hour=row.get("price_per_hour", 10.0),
+                standard_equipment=row.get("standard_equipment", ""),
+                opening_time=row.get("opening_time", "08:00"),
+                closing_time=row.get("closing_time", "22:00"),
+                minimum_duration=row.get("minimum_duration"),
+                advance_notice_hours=row.get("advance_notice_hours"),
+                late_cancellation_refund_rate=row.get("late_cancellation_refund_rate"),
+                no_show_refund_rate=row.get("no_show_refund_rate"),
+                late_cancellation_threshold_minutes=row.get(
+                    "late_cancellation_threshold_minutes", 30),
                 is_available=row.get("is_available", "True") == "True",
             )
             self.rooms[r.room_id] = r
@@ -218,8 +237,14 @@ class DataService:
         self._write_csv("buildings.csv", fieldnames, records)
 
     def _save_rooms(self):
-        fieldnames = ["room_id", "room_name", "building_id", "capacity",
-                       "price_per_hour", "is_available"]
+        fieldnames = [
+            "room_id", "room_name", "building_id", "room_type",
+            "capacity_min", "capacity_max", "capacity", "price_per_hour",
+            "standard_equipment", "opening_time", "closing_time",
+            "minimum_duration", "advance_notice_hours",
+            "late_cancellation_refund_rate", "no_show_refund_rate",
+            "late_cancellation_threshold_minutes", "is_available",
+        ]
         records = [r.to_dict() for r in self.rooms.values()]
         self._write_csv("rooms.csv", fieldnames, records)
 

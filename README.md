@@ -81,6 +81,8 @@ All stored in `data/` directory as CSV files:
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | admin@monash.edu | Monash1234! |
+| Student | student1@student.monash.edu | Student123! |
+| Student | student2@student.monash.edu | Student123! |
 | Student | alice@student.monash.edu | Monash1!a |
 | Student | bob@student.monash.edu | Monash1!b |
 | Student | charlie@student.monash.edu | Monash1!c |
@@ -93,12 +95,14 @@ All stored in `data/` directory as CSV files:
 ## 8. Business Rules
 - Only `@student.monash.edu` emails accepted for registration
 - Password: minimum 8 characters, at least 1 uppercase letter, 1 number
-- Room price: AUD $10/hour (fixed), includes table and chair
+- Room types: Small `1-2` people at `$10/hour`, Medium `3-6` people at `$40/hour`, Large `5-10` people at `$80/hour`
+- Booking rules: Small minimum `0.5` hour, Medium/Large minimum `2` hours, Medium requires `3` hours advance notice, Large requires `24` hours advance notice
 - Maximum 3 future bookings per student
 - Equipment borrowing: AUD $100 refundable deposit (Projector, Whiteboard, Monitor)
-- Package Deal: $100 for 12 bookable hours (no expiry, hours stack)
-- Promo code NEWBIE20: 20% off first booking (new accounts only)
-- Cancellation: >30 min before = full refund; <=30 min = late cancellation strike
+- Package Deal: $100 for 12 bookable hours (Small rooms only; no expiry, hours stack)
+- Promo code NEWBIE20: 20% off first Small-room booking with account balance (new accounts only)
+- Cancellation: outside late window = full refund; late cancellation adds a strike and refunds Small/Medium 50%, Large 30%
+- No-show refund: Small 20%, Medium/Large 0%
 - 3 combined strikes (late cancellation + no-show) = 3-month booking ban
 - Ban restarts from new violation date if violated during ban period
 - After ban expires, strike counts reset to 0

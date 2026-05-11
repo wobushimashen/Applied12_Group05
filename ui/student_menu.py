@@ -92,11 +92,12 @@ class StudentMenu:
             return
 
         # Display all rooms
-        print(f"\n  {'#':<4} {'Room':<15} {'Building':<12} {'Capacity':<10} {'Price/hr'}")
-        print("  " + "-" * 50)
+        print(f"\n  {'#':<4} {'Room':<15} {'Type':<8} {'Building':<12} {'Capacity':<10} {'Price/hr'}")
+        print("  " + "-" * 60)
         for i, room in enumerate(rooms, 1):
             bname = buildings.get(room.building_id, "Unknown")
-            print(f"  [{i}]  {room.room_name:<15} {bname:<12} {room.capacity:<10} ${room.price_per_hour:.2f}")
+            print(f"  [{i}]  {room.room_name:<15} {room.room_type:<8} {bname:<12} "
+                  f"{room.capacity_range:<10} ${room.price_per_hour:.2f}")
 
         # Time filter
         print("\n  Filter by time (or press Enter to skip):")
@@ -116,11 +117,12 @@ class StudentMenu:
                 return
 
             print(f"\n  Available rooms for {date} {start_time}-{end_time}:")
-            print(f"  {'#':<4} {'Room':<15} {'Building':<12} {'Capacity':<10} {'Price/hr'}")
-            print("  " + "-" * 50)
+            print(f"  {'#':<4} {'Room':<15} {'Type':<8} {'Building':<12} {'Capacity':<10} {'Price/hr'}")
+            print("  " + "-" * 60)
             for i, room in enumerate(rooms, 1):
                 bname = buildings.get(room.building_id, "Unknown")
-                print(f"  [{i}]  {room.room_name:<15} {bname:<12} {room.capacity:<10} ${room.price_per_hour:.2f}")
+                print(f"  [{i}]  {room.room_name:<15} {room.room_type:<8} {bname:<12} "
+                      f"{room.capacity_range:<10} ${room.price_per_hour:.2f}")
 
         # Building filter
         all_building_names = self.room_service.get_all_building_names()
@@ -133,10 +135,25 @@ class StudentMenu:
                 return
 
             print(f"\n  Rooms in {building_filter}:")
-            print(f"  {'#':<4} {'Room':<15} {'Capacity':<10} {'Price/hr'}")
-            print("  " + "-" * 40)
+            print(f"  {'#':<4} {'Room':<15} {'Type':<8} {'Capacity':<10} {'Price/hr'}")
+            print("  " + "-" * 50)
             for i, room in enumerate(rooms, 1):
-                print(f"  [{i}]  {room.room_name:<15} {room.capacity:<10} ${room.price_per_hour:.2f}")
+                print(f"  [{i}]  {room.room_name:<15} {room.room_type:<8} "
+                      f"{room.capacity_range:<10} ${room.price_per_hour:.2f}")
+
+        party_size = input("\n  >> Filter by party size (or press Enter to skip): ").strip()
+        if party_size:
+            rooms = self.room_service.filter_by_capacity(party_size, party_size, rooms)
+            if not rooms:
+                print("\n[!] No rooms available for the selected party size.")
+                return
+
+            print(f"\n  Rooms for party size {party_size}:")
+            print(f"  {'#':<4} {'Room':<15} {'Type':<8} {'Capacity':<10} {'Price/hr'}")
+            print("  " + "-" * 50)
+            for i, room in enumerate(rooms, 1):
+                print(f"  [{i}]  {room.room_name:<15} {room.room_type:<8} "
+                      f"{room.capacity_range:<10} ${room.price_per_hour:.2f}")
 
         # Select room
         print("\n  Select a room to view details or book:")
@@ -181,11 +198,12 @@ class StudentMenu:
         print("   Checkout Summary")
         print("-" * 50)
         print(f"  Room:      {selected_room.room_name} ({bname})")
+        print(f"  Type:      {selected_room.room_type}")
         print(f"  Date:      {date}")
         print(f"  Time:      {start_time} - {end_time}")
         print(f"  Duration:  {duration:.1f} hour(s)")
         print(f"  Cost:      ${total_cost:.2f}")
-        print(f"  Equipment: Table and Chair included")
+        print(f"  Equipment: {selected_room.standard_equipment}")
         print("-" * 50)
         print(f"  [1] Pay with Account Balance (${student.account_balance:.2f})")
         package_hours = self.ds.get_package_hours(student.user_id)
@@ -292,11 +310,19 @@ class StudentMenu:
         print(f"  Date/Time:  {booking.date} {booking.start_time}-{booking.end_time}")
         print(f"  Type:       {cancel_type}")
         if cancel_type == "Late Cancellation":
+            rate = room.late_cancellation_refund_rate if room else 0
             print(f"  [!] This will be recorded as a Late Cancellation strike.")
+            print(f"  Refund Rate:{int(rate * 100)}%")
         if booking.payment_method == "PackageHours":
-            print(f"  Refund:     {booking.duration:.1f} package hours will be restored")
+            hours = booking.duration
+            if cancel_type == "Late Cancellation" and room:
+                hours *= room.late_cancellation_refund_rate
+            print(f"  Refund:     {hours:.1f} package hours will be restored")
         else:
-            print(f"  Refund:     ${booking.original_cost:.2f} (full refund to account balance)")
+            amount = booking.total_cost
+            if cancel_type == "Late Cancellation" and room:
+                amount *= room.late_cancellation_refund_rate
+            print(f"  Refund:     ${amount:.2f} (refund to account balance)")
 
         confirm = input(f"\n>> Confirm cancellation? (y/n): ").strip()
         if confirm.lower() != "y":
@@ -506,10 +532,13 @@ class StudentMenu:
         print(f"   Room Details: {room.room_name}")
         print("-" * 50)
         print(f"  Building:    {details['building_name']}")
-        print(f"  Capacity:    {room.capacity} people")
+        print(f"  Type:        {room.room_type}")
+        print(f"  Capacity:    {room.capacity_range} people")
+        print(f"  Open Hours:  {room.opening_time}-{room.closing_time}")
         print(f"  Price:       ${room.price_per_hour:.2f}/hour")
+        print(f"  Min Duration:{room.minimum_duration:.1f} hour(s)")
         print(f"  Status:      {'Available' if room.is_available else 'Unavailable'}")
-        print(f"  Equipment:   Table and Chair (included)")
+        print(f"  Equipment:   {room.standard_equipment}")
 
         if details["available_equipment"]:
             print(f"\n  Optional Equipment Available:")

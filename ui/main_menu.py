@@ -9,6 +9,7 @@ class MainMenu:
         self.auth = auth_service
         self.student_menu = StudentMenu(data_service)
         self.admin_menu = AdminMenu(data_service)
+        self.current_user = None
 
     def show(self):
         while True:
@@ -44,11 +45,14 @@ class MainMenu:
             return
 
         print(f"\n[+] {message}")
+        self.current_user = user
 
         if isinstance(user, Student):
             self.student_menu.show(user)
         elif isinstance(user, Admin):
             self.admin_menu.show(user)
+
+        self.current_user = None
 
     def _register(self):
         print("\n" + "-" * 50)

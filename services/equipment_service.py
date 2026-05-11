@@ -22,6 +22,8 @@ class EquipmentService:
         equipment = self.ds.equipment.get(equipment_id)
         if not equipment:
             return False, "Equipment not found."
+        if equipment.room_id != booking.room_id:
+            return False, "The selected equipment is not available for this room."
         if not equipment.is_available or equipment.is_damaged:
             return False, "The selected equipment is no longer available. Please choose another item."
 

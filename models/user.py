@@ -48,20 +48,30 @@ class Student(User):
         })
         return d
 
-    def can_make_booking(self):
-        from datetime import datetime, timedelta
+    def _clear_expired_ban(self):
+        from datetime import datetime
+
         if self.is_banned and self.ban_end_date:
             ban_end = datetime.strptime(self.ban_end_date, "%Y-%m-%d")
-            if datetime.now() < ban_end:
-                return False
-            else:
+            if datetime.now() >= ban_end:
                 self.is_banned = False
                 self.ban_end_date = ""
                 self.late_cancellation_count = 0
                 self.no_show_count = 0
+
+    def can_make_booking(self):
+        from datetime import datetime
+
+        self._clear_expired_ban()
+        if self.is_banned and self.ban_end_date:
+            ban_end = datetime.strptime(self.ban_end_date, "%Y-%m-%d")
+            if datetime.now() < ban_end:
+                return False
         return True
 
     def add_strike(self, strike_type):
+        self._clear_expired_ban()
+
         if strike_type == "late_cancellation":
             self.late_cancellation_count += 1
         elif strike_type == "no_show":

@@ -1,3 +1,5 @@
+import math
+
 from models.transaction import Transaction
 from models.package_deal import PackageDeal
 
@@ -12,7 +14,7 @@ class PaymentService:
         except ValueError:
             return False, "Please enter a valid positive amount."
 
-        if amount <= 0:
+        if not math.isfinite(amount) or amount < 0.01:
             return False, "Please enter a valid positive amount."
         if amount > 1000:
             return False, "Maximum top-up amount is $1000 per transaction."
