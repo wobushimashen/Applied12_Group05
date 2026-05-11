@@ -1,4 +1,4 @@
-import csv
+﻿import csv
 import os
 
 from models.user import Student, Admin
@@ -33,11 +33,11 @@ class DataService:
 
         self._load_all()
 
-    # ── File Paths ──────────────────────────────────────────
+    # 鈹€鈹€ File Paths 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _path(self, filename):
         return os.path.join(DATA_DIR, filename)
 
-    # ── CSV Helpers ─────────────────────────────────────────
+    # 鈹€鈹€ CSV Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _read_csv(self, filename):
         filepath = self._path(filename)
         if not os.path.exists(filepath):
@@ -64,7 +64,7 @@ class DataService:
         except (OSError, csv.Error) as exc:
             print(f"[!] Could not write {filename}: {exc}")
 
-    # ── Load All Data ───────────────────────────────────────
+    # 鈹€鈹€ Load All Data 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def _load_all(self):
         self._load_users()
         self._load_buildings()
@@ -119,6 +119,7 @@ class DataService:
                 capacity_min=row.get("capacity_min"),
                 capacity_max=row.get("capacity_max"),
                 capacity=row.get("capacity", 2),
+                standard_equipment=row.get("standard_equipment", ""),
                 price_per_hour=row.get("price_per_hour", 10.0),
                 standard_equipment=row.get("standard_equipment", ""),
                 opening_time=row.get("opening_time", "08:00"),
@@ -210,7 +211,7 @@ class DataService:
                     if line and line != "student_id":
                         self.promo_codes_used.add(line)
 
-    # ── Save All Data ───────────────────────────────────────
+    # 鈹€鈹€ Save All Data 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     def save_all(self):
         self._save_users()
         self._save_buildings()
@@ -285,3 +286,5 @@ class DataService:
             f.write("student_id\n")
             for sid in self.promo_codes_used:
                 f.write(f"{sid}\n")
+
+

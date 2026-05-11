@@ -18,7 +18,6 @@ class RoomService:
 
         building = self.ds.get_building_by_name(building_name)
         if not building:
-            # Auto-create building
             from models.building import Building
             building = Building(building_name=building_name)
             self.ds.buildings[building.building_id] = building
@@ -45,6 +44,7 @@ class RoomService:
         room = Room(
             room_name=room_name,
             building_id=building.building_id,
+            room_type=room_type,
             capacity=capacity,
             room_type=normalized_type,
         )
@@ -131,7 +131,6 @@ class RoomService:
             self.ds.save_all()
             return True, "Room has active or future bookings, so it was marked unavailable instead of deleted."
 
-        # Remove equipment associated with this room
         eq_to_remove = [eid for eid, e in self.ds.equipment.items()
                         if e.room_id == room_id]
         for eid in eq_to_remove:
@@ -144,7 +143,6 @@ class RoomService:
     def get_all_rooms(self):
         return list(self.ds.rooms.values())
 
-    # ── Student Operations ──────────────────────────────────
     def browse_rooms(self):
         return [r for r in self.ds.rooms.values() if r.is_available]
 
@@ -176,7 +174,6 @@ class RoomService:
         return self.ds.rooms.get(room_id)
 
     def get_room_details(self, room_id):
-        """Get full room details including building name and equipment list."""
         room = self.ds.rooms.get(room_id)
         if not room:
             return None
@@ -197,7 +194,6 @@ class RoomService:
         }
 
     def filter_by_capacity(self, min_capacity, max_capacity, rooms=None):
-        """Filter rooms by capacity range."""
         if rooms is None:
             rooms = self.browse_rooms()
         try:

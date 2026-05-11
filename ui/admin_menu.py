@@ -1,4 +1,4 @@
-from models.user import Admin
+﻿from models.user import Admin
 from services.room_service import RoomService
 from services.booking_service import BookingService
 
@@ -52,9 +52,9 @@ class AdminMenu:
         rooms = self.room_service.get_all_rooms()
         buildings = {b.building_id: b.building_name for b in self.ds.buildings.values()}
 
-        print("\n" + "-" * 50)
+        print("\n" + "-" * 90)
         print("   All Rooms")
-        print("-" * 50)
+        print("-" * 90)
         if not rooms:
             print("  No rooms in the system.")
             return
@@ -99,7 +99,7 @@ class AdminMenu:
 
         room = self.ds.rooms.get(room_id)
         if not room:
-            print(f"\n[!] Room not found.")
+            print("\n[!] Room not found.")
             return
 
         print(f"\n  Current: {room.room_name}")
@@ -143,7 +143,7 @@ class AdminMenu:
         )
         if success:
             room = result
-            print(f"\n[+] Room updated successfully!")
+            print("\n[+] Room updated successfully!")
             print(f"    Name: {room.room_name}")
             print(f"    Type: {room.room_type}")
             print(f"    Capacity: {room.capacity_range}")
@@ -159,7 +159,7 @@ class AdminMenu:
         print("-" * 50)
         room_id = input(">> Enter Room ID to remove: ").strip()
 
-        confirm = input(f">> Are you sure you want to remove this room? (y/n): ").strip()
+        confirm = input(">> Are you sure you want to remove this room? (y/n): ").strip()
         if confirm.lower() != "y":
             print("\n[*] Removal cancelled.")
             return
@@ -218,7 +218,6 @@ class AdminMenu:
             print("  No overdue bookings to review.")
             return
 
-        buildings = {b.building_id: b.building_name for b in self.ds.buildings.values()}
         print(f"  {'#':<4} {'Reference':<18} {'Student':<12} {'Room':<10} {'Date':<12} {'Time'}")
         print("  " + "-" * 60)
         for i, b in enumerate(overdue, 1):

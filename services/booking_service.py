@@ -41,7 +41,6 @@ class BookingService:
         if len(active_bookings) >= 3:
             return False, "You have reached the maximum of 3 future bookings. Please cancel an existing booking first."
 
-        # Validate time
         valid, result = self.validate_time_slot(date, start_time, end_time)
         if not valid:
             return False, result
@@ -52,7 +51,6 @@ class BookingService:
         start_time = start.strftime("%H:%M")
         end_time = end.strftime("%H:%M")
 
-        # Check room exists and available
         room = self.ds.rooms.get(room_id)
         if not room:
             return False, "Room not found."
@@ -84,12 +82,11 @@ class BookingService:
             if len(self.ds.get_bookings_for_student(student.user_id)) > 0:
                 return False, "Promo code NEWBIE20 is only valid for your first booking."
             discount = total_cost * 0.20
+            promo_applied = True
 
         final_cost = total_cost - discount
-        original_cost = total_cost  # Track original cost for refund purposes
 
-        # Process payment
-        if payment_method == "1":  # Account balance
+        if payment_method == "1":
             if student.account_balance < final_cost:
                 return False, "Insufficient funds. Please add funds to your account."
             student.account_balance -= final_cost
@@ -102,11 +99,10 @@ class BookingService:
                 return False, "Insufficient package hours. Please purchase more hours or use account balance."
             self.ds.deduct_package_hours(student.user_id, duration)
             pay_method = Booking.PAYMENT_PACKAGE
-            final_cost = 0  # No money deducted, hours used instead
+            final_cost = 0
         else:
             return False, "Invalid payment method."
 
-        # Create booking
         booking = Booking(
             student_id=student.user_id,
             room_id=room_id,
@@ -114,14 +110,13 @@ class BookingService:
             start_time=start_time,
             end_time=end_time,
             duration=duration,
-            total_cost=final_cost if payment_method == "1" else duration * room.price_per_hour,
-            original_cost=original_cost,
+            total_cost=final_cost if payment_method == "1" else total_cost,
+            original_cost=total_cost,
             status=Booking.STATUS_ACTIVE,
             payment_method=pay_method,
         )
         self.ds.bookings[booking.booking_id] = booking
 
-        # Record transaction
         if payment_method == "1" and final_cost > 0:
             tx = Transaction(
                 student_id=student.user_id,
@@ -156,11 +151,16 @@ class BookingService:
         if not booking.is_future():
             return False, "Cannot cancel a booking that has already started or ended."
 
-        # Determine cancellation type
+        room = self.ds.rooms.get(booking.room_id)
+        if not room:
+            return False, "Room not found."
+
         now = datetime.now()
         booking_start = datetime.strptime(f"{booking.date} {booking.start_time}",
                                           "%Y-%m-%d %H:%M")
-        time_diff = (booking_start - now).total_seconds() / 60  # minutes
+        hours_before_start = (booking_start - now).total_seconds() / 3600
+        is_late = hours_before_start <= room.late_cancel_threshold_hours
+        refund_rate = room.late_cancel_refund_rate if is_late else 1.0
 
         room = self.ds.rooms.get(booking.room_id)
         late_threshold = room.late_cancellation_threshold_minutes if room else 30
@@ -217,7 +217,9 @@ class BookingService:
         return self.ds.get_active_future_bookings(student_id)
 
     def get_cancellation_type(self, booking):
-        """Determine if cancellation would be standard or late."""
+        room = self.ds.rooms.get(booking.room_id)
+        if not room:
+            return "Unknown"
         now = datetime.now()
         booking_start = datetime.strptime(f"{booking.date} {booking.start_time}",
                                           "%Y-%m-%d %H:%M")
@@ -228,13 +230,9 @@ class BookingService:
             return "Standard Cancellation"
         else:
             return "Late Cancellation"
+        return "Standard Cancellation"
 
     def check_no_shows(self):
-        """Detect and mark bookings where the student did not show up.
-        A booking is a no-show if: status is Active, end_time has passed,
-        and no equipment was borrowed during the session.
-        Returns list of (booking, student) tuples that were marked as no-show.
-        """
         now = datetime.now()
         no_shows = []
 
@@ -248,14 +246,12 @@ class BookingService:
             except ValueError:
                 continue
 
-            # Only check bookings that have ended
             if now <= booking_end:
                 continue
 
             if self._booking_has_any_equipment_loan(booking.booking_id):
                 continue
 
-            # Mark as no-show
             student = self.ds.users.get(booking.student_id)
             if not student or not hasattr(student, 'add_strike'):
                 continue
@@ -271,7 +267,6 @@ class BookingService:
         return no_shows
 
     def mark_no_show_admin(self, booking_id):
-        """Admin manually marks a booking as no-show."""
         booking = self.ds.bookings.get(booking_id)
         if not booking:
             return False, "Booking not found."
@@ -306,7 +301,6 @@ class BookingService:
         return list(self.ds.bookings.values())
 
     def get_overdue_bookings(self):
-        """Get active bookings that have passed their end time (potential no-shows)."""
         now = datetime.now()
         overdue = []
         for b in self.ds.bookings.values():
