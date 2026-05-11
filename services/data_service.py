@@ -119,7 +119,6 @@ class DataService:
                 capacity_min=row.get("capacity_min"),
                 capacity_max=row.get("capacity_max"),
                 capacity=row.get("capacity", 2),
-                standard_equipment=row.get("standard_equipment", ""),
                 price_per_hour=row.get("price_per_hour", 10.0),
                 standard_equipment=row.get("standard_equipment", ""),
                 opening_time=row.get("opening_time", "08:00"),
@@ -286,5 +285,4 @@ class DataService:
             f.write("student_id\n")
             for sid in self.promo_codes_used:
                 f.write(f"{sid}\n")
-
 

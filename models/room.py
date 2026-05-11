@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 
 
 class Room:
@@ -132,7 +132,6 @@ class Room:
             "capacity_min": str(self.capacity_min),
             "capacity_max": str(self.capacity_max),
             "capacity": str(self.capacity),
-            "standard_equipment": self.standard_equipment,
             "price_per_hour": f"{self.price_per_hour:.2f}",
             "standard_equipment": self.standard_equipment,
             "opening_time": self.opening_time,
@@ -144,5 +143,3 @@ class Room:
             "late_cancellation_threshold_minutes": str(self.late_cancellation_threshold_minutes),
             "is_available": str(self.is_available),
         }
-
-

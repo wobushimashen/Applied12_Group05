@@ -44,7 +44,6 @@ class RoomService:
         room = Room(
             room_name=room_name,
             building_id=building.building_id,
-            room_type=room_type,
             capacity=capacity,
             room_type=normalized_type,
         )

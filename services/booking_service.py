@@ -158,11 +158,7 @@ class BookingService:
         now = datetime.now()
         booking_start = datetime.strptime(f"{booking.date} {booking.start_time}",
                                           "%Y-%m-%d %H:%M")
-        hours_before_start = (booking_start - now).total_seconds() / 3600
-        is_late = hours_before_start <= room.late_cancel_threshold_hours
-        refund_rate = room.late_cancel_refund_rate if is_late else 1.0
-
-        room = self.ds.rooms.get(booking.room_id)
+        time_diff = (booking_start - now).total_seconds() / 60
         late_threshold = room.late_cancellation_threshold_minutes if room else 30
         refund_rate = 1.0
         is_late = time_diff <= late_threshold
